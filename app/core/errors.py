@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -22,23 +23,6 @@ class NotFoundError(ApiError):
         )
 
 
-class ValidationError(ApiError):
-    def __init__(self, message: str = "Validation error", details: Any = None):
-        super().__init__(
-            code="validation_error", message=message, status=422, details=details
-        )
-
-
-class AuthorizationError(ApiError):
-    def __init__(self, message: str = "Authorization required"):
-        super().__init__(code="authorization_error", message=message, status=401)
-
-
-class PermissionError(ApiError):
-    def __init__(self, message: str = "Permission denied"):
-        super().__init__(code="permission_error", message=message, status=403)
-
-
 async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
     response_content: Dict[str, Any] = {
         "error": {"code": exc.code, "message": exc.message}
@@ -48,6 +32,24 @@ async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
         response_content["error"]["details"] = exc.details
 
     return JSONResponse(status_code=exc.status, content=response_content)
+
+
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    errors = exc.errors()
+    first_error = errors[0] if errors else {}
+
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "validation_error",
+                "message": f"Validation error for field {first_error.get('loc', ['unknown'])[-1]}",
+                "details": errors,
+            }
+        },
+    )
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:

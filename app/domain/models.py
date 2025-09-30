@@ -12,7 +12,7 @@ class EntryKind(str, Enum):
 class EntryStatus(str, Enum):
     PLANNED = "planned"
     READING = "reading"
-    FINISHED = "finished"
+    COMPLETED = "completed"
 
 
 class EntryBase(BaseModel):
@@ -21,7 +21,7 @@ class EntryBase(BaseModel):
     link: Optional[str] = None
     status: EntryStatus = EntryStatus.PLANNED
 
-    @validator("title")
+    @validator("title", allow_reuse=True)
     def title_not_empty(cls, v):
         if not v or not v.strip():
             raise ValueError("Title cannot be empty")
@@ -33,10 +33,12 @@ class EntryBase(BaseModel):
             raise ValueError("Title must be less than 200 characters")
         return v
 
-    @validator("description")
-    def description_length(cls, v):
-        if v and len(v) > 1000:
-            raise ValueError("Description must be less than 1000 characters")
+    @validator("link")
+    def validate_link(cls, v):
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError(
+                "Link must be a valid URL starting with http:// or https://"
+            )
         return v
 
 
@@ -49,18 +51,29 @@ class EntryUpdate(BaseModel):
     kind: Optional[EntryKind] = None
     link: Optional[str] = None
     status: Optional[EntryStatus] = None
-    description: Optional[str] = None
 
     @validator("title")
     def title_not_empty_if_provided(cls, v):
         if v is not None and not v.strip():
-            raise ValueError("Title cannot be empty")
+            raise ValueError("Title cannot be empty if provided")
         return v.strip() if v else v
+
+    @validator("link")
+    def validate_link_if_provided(cls, v):
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError(
+                "Link must be a valid URL starting with http:// or https://"
+            )
+        return v
 
 
 class Entry(EntryBase):
     id: int
     owner_id: int
+
+    class Config:
+        orm_mode = True
+        use_enum_values = True
 
 
 class EntryList(BaseModel):
