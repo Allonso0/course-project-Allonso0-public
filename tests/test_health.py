@@ -1,11 +1,15 @@
-from fastapi.testclient import TestClient
+def test_health_endpoint(test_client):
+    response = test_client.get("/api/v1/health")
 
-from app.main import app
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "service": "Reading List API"}
 
-client = TestClient(app)
 
+def test_root_endpoint(test_client):
+    response = test_client.get("/")
 
-def test_health_ok():
-    r = client.get("/health")
-    assert r.status_code == 200
-    assert r.json() == {"status": "ok"}
+    assert response.status_code == 200
+    data = response.json()
+    assert "message" in data
+    assert "version" in data
+    assert data["version"] == "0.1.0"
