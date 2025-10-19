@@ -9,11 +9,10 @@ def test_rate_limiting_fast():
 
     base_url = "http://localhost:8000/api/v1"
 
-    # Тест 1: GET /entries (лимит: 5/минуту)
     print("\n1. Testing GET /entries (limit: 5 per minute)")
     success_count = 0
 
-    for i in range(8):  # Делаем 8 запросов чтобы превысить лимит 5
+    for i in range(8):
         try:
             response = requests.get(f"{base_url}/entries")
             print(f"   Request {i+1}: Status {response.status_code}")
@@ -31,11 +30,10 @@ def test_rate_limiting_fast():
         except Exception as e:
             print(f"   Error: {e}")
 
-        time.sleep(0.5)  # Небольшая задержка
+        time.sleep(0.5)
 
-    # Тест 2: POST /entries (лимит: 3/минуту)
     print("\n2. Testing POST /entries (limit: 3 per minute)")
-    for i in range(5):  # Делаем 5 POST запросов
+    for i in range(5):
         try:
             data = {
                 "title": f"Test Book {i}",
@@ -58,7 +56,6 @@ def test_rate_limiting_fast():
 
         time.sleep(0.5)
 
-    # Итоги
     print("\n" + "=" * 50)
     if success_count >= 1:
         print(f"SUCCESS: Rate limiting is working! ({success_count}/2 tests passed)")

@@ -7,6 +7,10 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["TESTING"] = "true"
 
+os.environ["APP_JWT_SECRET"] = "test_jwt_secret"
+os.environ["APP_DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["APP_API_KEY"] = "test_api_key"
+
 from app.api.endpoints.entries import reset_database
 from app.main import app
 
