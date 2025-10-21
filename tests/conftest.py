@@ -8,16 +8,34 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["TESTING"] = "true"
 
 os.environ["APP_JWT_SECRET"] = "test_jwt_secret"
-os.environ["APP_DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["APP_DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["APP_API_KEY"] = "test_api_key"
 
-from app.api.endpoints.entries import reset_database
+
+from app.domain.database_models import Base
 from app.main import app
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    from app.core.database import engine
+
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture(autouse=True)
 def clean_database():
-    reset_database()
+    from app.core.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
+        db.commit()
+    finally:
+        db.close()
     yield
 
 
