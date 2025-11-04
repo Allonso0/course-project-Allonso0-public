@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -77,28 +76,31 @@ class TestFileUploadSecurity:
             )
 
     def test_symlink_protection(self, tmp_path):
-        import sys
-        if 'github' in str(tmp_path).lower() or '/tmp/pytest-of-runner/' in str(tmp_path):
-            pytest.skip("Symlink test skipped in CI environment due to filesystem differences")
+        if "github" in str(tmp_path).lower() or "/tmp/pytest-of-runner/" in str(
+            tmp_path
+        ):
+            pytest.skip(
+                "Symlink test skipped in CI environment due to filesystem differences"
+            )
             return
-        
+
         try:
             target_dir = tmp_path / "target"
             target_dir.mkdir()
-            
+
             symlink_dir = tmp_path / "symlink"
             symlink_dir.symlink_to(target_dir)
-            
+
             if not symlink_dir.is_symlink():
                 pytest.skip("Symlink creation failed")
-            
+
             png_data = b"\x89PNG\r\n\x1a\nvalid_png"
-            
+
             success, result = secure_file_save(str(symlink_dir), "test.png", png_data)
-            
+
             assert success is False
             assert "symlink" in result.lower()
-            
+
         except (OSError, NotImplementedError):
             pytest.skip("Symlinks not supported on this filesystem")
 
