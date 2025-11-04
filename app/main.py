@@ -28,7 +28,7 @@ app = FastAPI(
 
 secrets_initialized = setup_secrets()
 if not secrets_initialized:
-    print("⚠️  Warning: Running with missing secrets (development mode)")
+    print("Warning: Running with missing secrets (development mode)")
 
 create_tables()
 
