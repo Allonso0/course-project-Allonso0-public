@@ -6,6 +6,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.endpoints.health import router as health_router
 from app.api.routes import api_router
+from app.core.database import create_tables
 from app.core.errors import (
     ApiError,
     api_error_handler,
@@ -25,8 +26,11 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-if not setup_secrets():
-    raise RuntimeError("Failed to initialize secrets")
+secrets_initialized = setup_secrets()
+if not secrets_initialized:
+    print("⚠️  Warning: Running with missing secrets (development mode)")
+
+create_tables()
 
 app.state.limiter = limiter
 
