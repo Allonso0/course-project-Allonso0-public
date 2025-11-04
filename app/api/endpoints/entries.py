@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.core.errors import NotFoundError
+from app.core.security import ENDPOINT_LIMITS, limiter
 from app.domain.models import Entry, EntryCreate, EntryStatus, EntryUpdate
 
 router = APIRouter()
@@ -24,7 +25,10 @@ def reset_database():
     status_code=status.HTTP_201_CREATED,
     summary="Создать новую запись",
 )
-async def create_entry(entry_data: EntryCreate) -> Entry:
+@limiter.limit(
+    ENDPOINT_LIMITS["create_entry"] if ENDPOINT_LIMITS["create_entry"] else None
+)
+async def create_entry(request: Request, entry_data: EntryCreate) -> Entry:
     global current_id
 
     entry = Entry(id=current_id, owner_id=1, **entry_data.dict())
@@ -36,8 +40,12 @@ async def create_entry(entry_data: EntryCreate) -> Entry:
 
 
 @router.get("/", response_model=List[Entry], summary="Получить список записей")
+@limiter.limit(
+    ENDPOINT_LIMITS["get_entries"] if ENDPOINT_LIMITS["get_entries"] else None
+)
 async def get_entries(
-    status: Optional[EntryStatus] = Query(None, description="Фильтр по статусу")
+    request: Request,
+    status: Optional[EntryStatus] = Query(None, description="Фильтр по статусу"),
 ) -> List[Entry]:
     if status:
         return [entry for entry in entries_db if entry.status == status]
@@ -45,7 +53,8 @@ async def get_entries(
 
 
 @router.get("/{entry_id}", response_model=Entry, summary="Получить запись по ID")
-async def get_entry(entry_id: int) -> Entry:
+@limiter.limit(ENDPOINT_LIMITS["get_entry"] if ENDPOINT_LIMITS["get_entry"] else None)
+async def get_entry(request: Request, entry_id: int) -> Entry:
     for entry in entries_db:
         if entry.id == entry_id:
             return entry
@@ -54,7 +63,12 @@ async def get_entry(entry_id: int) -> Entry:
 
 
 @router.put("/{entry_id}", response_model=Entry, summary="Обновить запись")
-async def update_entry(entry_id: int, entry_data: EntryUpdate) -> Entry:
+@limiter.limit(
+    ENDPOINT_LIMITS["update_entry"] if ENDPOINT_LIMITS["update_entry"] else None
+)
+async def update_entry(
+    request: Request, entry_id: int, entry_data: EntryUpdate
+) -> Entry:
     for index, entry in enumerate(entries_db):
         if entry.id == entry_id:
             current_data = entry.dict()
@@ -72,7 +86,10 @@ async def update_entry(entry_id: int, entry_data: EntryUpdate) -> Entry:
 @router.delete(
     "/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Удалить запись"
 )
-async def delete_entry(entry_id: int):
+@limiter.limit(
+    ENDPOINT_LIMITS["delete_entry"] if ENDPOINT_LIMITS["delete_entry"] else None
+)
+async def delete_entry(request: Request, entry_id: int):
     global entries_db
 
     for index, entry in enumerate(entries_db):

@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["TESTING"] = "true"
 
 from app.api.endpoints.entries import reset_database
 from app.main import app

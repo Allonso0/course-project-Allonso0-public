@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.endpoints.health import router as health_router
 from app.api.routes import api_router
@@ -9,6 +11,7 @@ from app.core.errors import (
     http_exception_handler,
     validation_error_handler,
 )
+from app.core.security import limiter
 
 app = FastAPI(
     title="Reading List API",
@@ -18,9 +21,12 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.state.limiter = limiter
+
 app.add_exception_handler(ApiError, api_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(health_router, prefix="/api/v1")
 
