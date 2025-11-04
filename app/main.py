@@ -2,15 +2,19 @@ from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.endpoints.health import router as health_router
 from app.api.routes import api_router
 from app.core.errors import (
     ApiError,
     api_error_handler,
+    global_exception_handler,
     http_exception_handler,
+    starlette_http_exception_handler,
     validation_error_handler,
 )
+from app.core.secrets import setup_secrets
 from app.core.security import limiter
 
 app = FastAPI(
@@ -21,11 +25,16 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+if not setup_secrets():
+    raise RuntimeError("Failed to initialize secrets")
+
 app.state.limiter = limiter
 
 app.add_exception_handler(ApiError, api_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(StarletteHTTPException, starlette_http_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(health_router, prefix="/api/v1")

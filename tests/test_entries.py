@@ -47,8 +47,10 @@ class TestGetEntry:
 
         assert response.status_code == 404
         error_data = response.json()
-        assert error_data["error"]["code"] == "not_found"
-        assert "Entry with id 999 not found" in error_data["error"]["message"]
+        assert error_data["type"] == "/errors/not-found"
+        assert error_data["title"] == "Not Found"
+        assert "Entry with id 999 not found" in error_data["detail"]
+        assert "correlation_id" in error_data
 
 
 class TestUpdateEntry:
@@ -91,3 +93,5 @@ class TestDeleteEntry:
 
         get_response = test_client.get(f"/api/v1/entries/{entry_id}")
         assert get_response.status_code == 404
+        error_data = get_response.json()
+        assert error_data["type"] == "/errors/not-found"
