@@ -1,0 +1,31 @@
+services:
+  reading-list-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reading-list-app
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_JWT_SECRET=${APP_JWT_SECRET}
+      - APP_DATABASE_URL=${APP_DATABASE_URL}
+      - APP_API_KEY=${APP_API_KEY}
+      - APP_VAULT_ADDR=${APP_VAULT_ADDR}
+      - UPLOAD_DIR=/app/uploads
+      - DEVELOPMENT=false
+    volumes:
+      - ./uploads:/app/uploads
+      - ./reading_list.db:/app/reading_list.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - reading-list-network
+
+networks:
+  reading-list-network:
+    driver: bridge
