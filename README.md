@@ -1,6 +1,6 @@
-# SecDev Course Template
+# Reading List API
 
-Стартовый шаблон для студенческого репозитория (HSE SecDev 2025).
+![CI](https://github.com/Allonso0/course-project-Allonso0-public/actions/workflows/ci.yml/badge.svg)
 
 ## Быстрый старт
 ```bash
