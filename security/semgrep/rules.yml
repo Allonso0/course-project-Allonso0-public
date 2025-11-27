@@ -33,7 +33,10 @@ rules:
     message: "Catching general Exception may hide errors"
     severity: WARNING
     pattern: |
-      except Exception as $E:
+      except:
+        ...
+    pattern-not: |
+      except Exception:
         ...
     metadata:
       category: best-practice
