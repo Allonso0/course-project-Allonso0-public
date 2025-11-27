@@ -1,0 +1,50 @@
+rules:
+  - id: python-hardcoded-password
+    languages: [python]
+    message: "Potential hardcoded password or secret"
+    severity: ERROR
+    pattern-regex: |
+      '(?i)(password|pwd|secret|key|token)\s*=\s*["\'][^"\']{4,}["\']'
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  - id: python-assert-in-production
+    languages: [python]
+    message: "Assert statements should not be used in production code"
+    severity: WARNING
+    pattern: assert ...
+    metadata:
+      category: best-practice
+
+  - id: fastapi-missing-dependency-injection
+    languages: [python]
+    message: "FastAPI endpoint may be missing proper dependency injection for security"
+    severity: INFO
+    pattern: |
+      @router.$METHOD("...")
+      async def $FUNC($REQUEST):
+        ...
+    metadata:
+      category: security
+
+  - id: general-exception-catch
+    languages: [python]
+    message: "Catching general Exception may hide errors"
+    severity: WARNING
+    pattern: |
+      except:
+        ...
+    pattern-not: |
+      except Exception:
+        ...
+    metadata:
+      category: best-practice
+
+  - id: debug-logging-sensitive-data
+    languages: [python]
+    message: "Debug logging may expose sensitive data"
+    severity: WARNING
+    pattern-regex: '(?i)log\.(debug|info)\(.*(password|token|key|secret).*\)'
+    metadata:
+      category: security

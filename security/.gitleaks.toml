@@ -1,0 +1,25 @@
+title = "Reading List API Gitleaks Config"
+
+[extend]
+# Use default rules
+useDefault = true
+
+[allowlist]
+description = "Ignore non-sensitive patterns and test files"
+paths = [
+  "EVIDENCE/",
+  "tests/",
+  "test_.*\\.py",
+  ".*/test_.*\\.py",
+  "policy/"
+]
+
+commits = []
+
+regexes = [
+  '''example.*key''',
+  '''test.*secret''',
+  '''fake.*password''',
+  '''CVE-\d{4}-\d+''',
+  '''tutor@example\.org'''
+]
