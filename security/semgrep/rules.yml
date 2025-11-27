@@ -1,0 +1,55 @@
+rules:
+  - id: fastapi-direct-db-return
+    languages: [python]
+    message: "Direct return of database objects may expose sensitive fields"
+    severity: WARNING
+    pattern: |
+      return $DB_OBJECT
+    metadata:
+      category: security
+      cwe: "CWE-200: Exposure of Sensitive Information"
+
+  - id: sqlalchemy-raw-sql
+    languages: [python]
+    message: "Raw SQL query may be vulnerable to injection"
+    severity: ERROR
+    patterns:
+      - pattern: |
+          session.execute(f"SELECT ... $VAR ...")
+      - pattern: |
+          session.execute("..." + $VAR + "...")
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+
+  - id: file-upload-security
+    languages: [python]
+    message: "File upload endpoint should validate file types and sizes"
+    severity: WARNING
+    pattern: |
+      @router.post("/upload")
+      async def upload_file(...):
+        ...
+    metadata:
+      category: security
+      cwe: "CWE-434: Unrestricted Upload of File"
+
+  - id: missing-authentication
+    languages: [python]
+    message: "Endpoint may be missing authentication"
+    severity: INFO
+    pattern: |
+      @router.$METHOD("...")
+      async def $FUNC(...):
+        ...
+    metadata:
+      category: security
+
+  - id: debug-mode-production
+    languages: [python]
+    message: "Debug mode should not be enabled in production"
+    severity: ERROR
+    pattern: |
+      debug=True
+    metadata:
+      category: security
