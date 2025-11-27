@@ -1,60 +1,47 @@
 rules:
-  - id: fastapi-direct-db-model-return
+  - id: python-hardcoded-password
     languages: [python]
-    message: "Direct return of SQLAlchemy models may expose internal fields"
-    severity: WARNING
-    patterns:
-      - pattern: |
-          return $MODEL
-      - pattern-inside: |
-          @router.$METHOD("...")
-          async def $FUNC(...):
-            ...
-            $BODY
-      - metavariable-regex:
-          metavariable: $MODEL
-          regex: "(session|query|db|repository)"
-    metadata:
-      category: security
-      cwe: "CWE-200: Exposure of Sensitive Information"
-
-  - id: sqlalchemy-raw-sql-injection
-    languages: [python]
-    message: "Raw SQL query may be vulnerable to injection"
+    message: "Potential hardcoded password or secret"
     severity: ERROR
-    patterns:
-      - pattern: |
-          session.execute(f"SELECT ... $VAR ...")
-      - pattern: |
-          session.execute("..." + $VAR + "...")
+    pattern-regex: |
+      '(?i)(password|pwd|secret|key|token)\s*=\s*["\'][^"\']{4,}["\']'
     metadata:
       category: security
-      cwe: "CWE-89: SQL Injection"
+      cwe: "CWE-798: Use of Hard-coded Credentials"
 
-  - id: file-upload-validation-missing
+  - id: python-assert-in-production
     languages: [python]
-    message: "File upload should validate file type and size"
+    message: "Assert statements should not be used in production code"
     severity: WARNING
-    patterns:
-      - pattern: |
-          @router.post("...upload...")
-          async def $FUNC(..., file: UploadFile = File(...)):
-            ...
-      - pattern-not: |
-          if $FILE_TYPE_CHECK:
-            ...
-      - pattern-not: |
-          if $FILE_SIZE_CHECK:
-            ...
+    pattern: assert ...
     metadata:
-      category: security
-      cwe: "CWE-434: Unrestricted Upload of File"
+      category: best-practice
 
-  - id: debug-mode-enabled
+  - id: fastapi-missing-dependency-injection
     languages: [python]
-    message: "Debug mode should not be enabled in production"
-    severity: ERROR
+    message: "FastAPI endpoint may be missing proper dependency injection for security"
+    severity: INFO
     pattern: |
-      debug=True
+      @router.$METHOD("...")
+      async def $FUNC($REQUEST):
+        ...
+    metadata:
+      category: security
+
+  - id: general-exception-catch
+    languages: [python]
+    message: "Catching general Exception may hide errors"
+    severity: WARNING
+    pattern: |
+      except Exception as $E:
+        ...
+    metadata:
+      category: best-practice
+
+  - id: debug-logging-sensitive-data
+    languages: [python]
+    message: "Debug logging may expose sensitive data"
+    severity: WARNING
+    pattern-regex: '(?i)log\.(debug|info)\(.*(password|token|key|secret).*\)'
     metadata:
       category: security
