@@ -9,9 +9,9 @@ description = "Ignore non-sensitive patterns and test files"
 paths = [
   "EVIDENCE/",
   "tests/",
-  "test_*.py",
-  "*/test_*.py",
-  "policy/waivers.yml"
+  "test_.*\\.py",
+  ".*/test_.*\\.py",
+  "policy/"
 ]
 
 commits = []
