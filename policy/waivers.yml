@@ -1,0 +1,10 @@
+waivers:
+  # Пример waiver для демонстрации структуры
+  - id: "EXAMPLE-WAIVER-001"
+    package: "example-package"
+    version: "1.0.0"
+    severity: "Medium"
+    reason: "Пример waiver для демонстрации структуры файла"
+    issue: "https://github.com/your-username/course-project-Allonso0-public/issues/1"
+    expires_at: "2025-12-31"
+    approved_by: "tutor@example.org"
