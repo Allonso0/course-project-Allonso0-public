@@ -1,10 +1,24 @@
+# policy/waivers.yml — файл исключений для SBOM & SCA
+# Политика управления уязвимостями зависимостей
+
 waivers:
-  # Пример waiver для демонстрации структуры
-  - id: "EXAMPLE-WAIVER-001"
-    package: "example-package"
-    version: "1.0.0"
-    severity: "Medium"
-    reason: "Пример waiver для демонстрации структуры файла"
+  # Уязвимость в python-multipart - требуется обновление
+  - id: "CVE-2024-53981"
+    package: "python-multipart"
+    version: "0.0.9"
+    severity: "High"
+    reason: "Уязвимость DoS в multipart парсере. Требуется обновление до версии 0.0.18. Временный waiver для планирования фикса."
     issue: "https://github.com/your-username/course-project-Allonso0-public/issues/1"
-    expires_at: "2025-12-31"
+    expires_at: "2025-12-15"
     approved_by: "tutor@example.org"
+    action_required: "update"
+
+  # Другие уязвимости будут добавлены после полного анализа
+  # - id: "CVE-XXXX-XXXX"
+  #   package: "package-name"
+  #   version: "x.x.x"
+  #   severity: "Medium"
+  #   reason: "Описание причины waiver"
+  #   issue: "ссылка на issue"
+  #   expires_at: "2025-12-31"
+  #   approved_by: "tutor@example.org"
