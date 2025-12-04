@@ -23,8 +23,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create evidence directory
-        run: mkdir -p EVIDENCE/P11
+      - name: Prepare evidence directories
+        run: |
+          mkdir -p EVIDENCE/P11
+          mkdir -p .zap-output   # локальная директория, куда ZAP сможет писать
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -46,13 +48,19 @@ jobs:
 
       - name: Run OWASP ZAP Baseline Scan
         run: |
-          docker run --rm --network host -v $PWD:/zap/wrk zaproxy/zap-stable:latest \
-            zap-baseline.py \
-              -t http://localhost:8080 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
-              -d || true
-          mv zap_baseline.* EVIDENCE/P11/ || true
+          docker run --rm --network host \
+            -v $PWD/.zap-output:/zap/wrk/output \
+            zaproxy/zap-stable:latest \
+              zap-baseline.py \
+                -t http://localhost:8080 \
+                -r output/zap_baseline.html \
+                -J output/zap_baseline.json \
+                -d || true
+
+      - name: Move ZAP results to EVIDENCE
+        run: |
+          cp .zap-output/zap_baseline.* EVIDENCE/P11/ || true
+          ls -la EVIDENCE/P11 || true
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4
