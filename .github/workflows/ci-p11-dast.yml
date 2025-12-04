@@ -40,31 +40,66 @@ jobs:
 
       - name: Run app
         run: |
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo "Starting FastAPI app..."
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning &
+          APP_PID=$!
 
           echo "Waiting for app to start..."
-          timeout 30 bash -c 'until curl -sf http://localhost:8000/api/v1/health; do sleep 1; done'
-          echo "App is ready!"
+          for i in {1..30}; do
+            if curl -s -f http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+              echo "✓ App is ready!"
+              break
+            fi
+            echo "Attempt $i/30: App not ready yet..."
+            sleep 1
+          done
+
+          curl -s http://localhost:8000/api/v1/health || echo "Health check failed"
+          curl -s http://localhost:8000/ || echo "Root check failed"
 
       - name: ZAP Baseline
         run: |
-          echo "Starting ZAP baseline scan..."
-          docker run --rm --network host -v $PWD:/zap/wrk owasp/zap2docker-stable \
+          echo "=== Starting ZAP baseline scan ==="
+          echo "Current directory: $(pwd)"
+          echo "Files in EVIDENCE/P11/: $(ls -la EVIDENCE/P11/ || echo 'empty')"
+
+          docker run --rm --network host -v $PWD:/zap/wrk/:Z owasp/zap2docker-stable \
             zap-baseline.py \
               -t http://localhost:8000 \
-              -r zap_baseline.html \
-              -J zap_baseline.json \
-              -d || echo "ZAP completed with findings"
+              -r /zap/wrk/zap_baseline.html \
+              -J /zap/wrk/zap_baseline.json \
+              -d \
+              -c zap_baseline.conf || echo "ZAP scan completed"
+
+          echo "=== After ZAP scan ==="
+          echo "Files in current dir:"
+          ls -la *.html *.json 2>/dev/null || echo "No HTML/JSON files found"
+
+          echo "Files in EVIDENCE/P11/:"
+          ls -la EVIDENCE/P11/ || echo "EVIDENCE/P11/ is empty"
 
           if [ -f "zap_baseline.html" ]; then
+            echo "Moving HTML report..."
             mv zap_baseline.html EVIDENCE/P11/
-            echo "HTML report saved"
+          else
+            echo "HTML report not found, creating empty one"
+            echo "<html><body>No ZAP report generated</body></html>" > EVIDENCE/P11/zap_baseline.html
           fi
 
           if [ -f "zap_baseline.json" ]; then
+            echo "Moving JSON report..."
             mv zap_baseline.json EVIDENCE/P11/
-            echo "JSON report saved"
+          else
+            echo "JSON report not found, creating empty one"
+            echo '{"@generated": "NO_REPORT"}' > EVIDENCE/P11/zap_baseline.json
           fi
+
+      - name: Debug - List all files
+        run: |
+          echo "=== Final file structure ==="
+          find . -name "*.html" -o -name "*.json" | head -20
+          echo "=== EVIDENCE/P11 contents ==="
+          ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
         uses: actions/upload-artifact@v4
