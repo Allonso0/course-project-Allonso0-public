@@ -1,0 +1,70 @@
+name: Security - DAST (P11, OWASP ZAP Baseline)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/**"
+      - ".github/workflows/ci-p11-dast.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dast_p11:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare evidence directories
+        run: |
+          mkdir -p EVIDENCE/P11
+          mkdir -p .zap-output
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-prod.txt ]; then pip install -r requirements-prod.txt; fi
+
+      - name: Run FastAPI app
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8080 &
+          echo "Waiting for API to become ready..."
+          timeout 30 bash -c 'until curl -sf http://localhost:8080/api/v1/health; do sleep 1; done'
+          echo "API is UP"
+
+      - name: Run OWASP ZAP Baseline Scan (run as root)
+        run: |
+          docker run --rm --user root --network host \
+            -v $PWD/.zap-output:/zap/wrk/output \
+            zaproxy/zap-stable:latest \
+              zap-baseline.py \
+                -t http://localhost:8080 \
+                -r output/zap_baseline.html \
+                -J output/zap_baseline.json \
+                -d || true
+
+      - name: Move ZAP results to EVIDENCE
+        run: |
+          cp .zap-output/zap_baseline.* EVIDENCE/P11/ || true
+          echo "Files in EVIDENCE/P11:"
+          ls -la EVIDENCE/P11 || true
+
+      - name: Upload evidence artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_EVIDENCE
+          path: EVIDENCE/P11
