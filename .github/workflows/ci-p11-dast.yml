@@ -1,0 +1,74 @@
+name: Security - DAST (P11, ZAP baseline)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/**"
+      - ".github/workflows/ci-p11-dast.yml"
+      - "requirements*.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dast_p11:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure evidence dirs
+        run: mkdir -p EVIDENCE/P11
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-prod.txt
+          pip install "uvicorn[standard]"
+
+      - name: Run app
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+          echo "Waiting for app to start..."
+          timeout 30 bash -c 'until curl -sf http://localhost:8000/api/v1/health; do sleep 1; done'
+          echo "App is ready!"
+
+      - name: ZAP Baseline
+        run: |
+          echo "Starting ZAP baseline scan..."
+          docker run --rm --network host -v $PWD:/zap/wrk owasp/zap2docker-stable \
+            zap-baseline.py \
+              -t http://localhost:8000 \
+              -r zap_baseline.html \
+              -J zap_baseline.json \
+              -d || echo "ZAP completed with findings"
+
+          if [ -f "zap_baseline.html" ]; then
+            mv zap_baseline.html EVIDENCE/P11/
+            echo "HTML report saved"
+          fi
+
+          if [ -f "zap_baseline.json" ]; then
+            mv zap_baseline.json EVIDENCE/P11/
+            echo "JSON report saved"
+          fi
+
+      - name: Upload P11 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: P11_EVIDENCE
+          path: EVIDENCE/P11
+          retention-days: 30
