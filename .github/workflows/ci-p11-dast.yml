@@ -38,67 +38,87 @@ jobs:
           pip install -r requirements-prod.txt
           pip install "uvicorn[standard]"
 
+      - name: Create minimal env file for CI
+        run: |
+          echo "Creating .env file for CI..."
+          cat > .env << EOF
+          DATABASE_URL=sqlite:///./test_reading_list.db
+          SECRET_KEY=ci-test-secret-key-do-not-use-in-production
+          DEBUG=False
+          UPLOAD_DIR=./uploads
+          MAX_UPLOAD_SIZE=10485760
+          EOF
+          cat .env
+
       - name: Run app
         run: |
-          echo "Starting FastAPI app..."
+          echo "=== Starting FastAPI app ==="
+
+          lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+
           uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning &
           APP_PID=$!
+          echo "App PID: $APP_PID"
 
-          echo "Waiting for app to start..."
+          echo "=== Waiting for app to start (max 30 seconds) ==="
           for i in {1..30}; do
             if curl -s -f http://localhost:8000/api/v1/health > /dev/null 2>&1; then
-              echo "✓ App is ready!"
+              echo "✓ App is ready after $i seconds!"
+              curl -s http://localhost:8000/api/v1/health | jq . || echo "Health check response:"
+              curl -s http://localhost:8000/api/v1/health
               break
             fi
-            echo "Attempt $i/30: App not ready yet..."
+            if [ $i -eq 30 ]; then
+              echo "✗ App failed to start after 30 seconds"
+              echo "Checking processes:"
+              ps aux | grep uvicorn || true
+              echo "Checking port 8000:"
+              netstat -tuln | grep :8000 || true
+              exit 1
+            fi
+            echo "  Attempt $i/30: Waiting..."
             sleep 1
           done
 
-          curl -s http://localhost:8000/api/v1/health || echo "Health check failed"
-          curl -s http://localhost:8000/ || echo "Root check failed"
+          echo "=== Testing endpoints ==="
+          curl -s http://localhost:8000/ || echo "Root endpoint failed"
+          echo ""
 
       - name: ZAP Baseline
         run: |
           echo "=== Starting ZAP baseline scan ==="
           echo "Current directory: $(pwd)"
-          echo "Files in EVIDENCE/P11/: $(ls -la EVIDENCE/P11/ || echo 'empty')"
 
-          docker run --rm --network host -v $PWD:/zap/wrk/:Z owasp/zap2docker-stable \
-            zap-baseline.py \
+          docker run --rm --network host \
+            -v $(pwd):/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
               -t http://localhost:8000 \
               -r /zap/wrk/zap_baseline.html \
               -J /zap/wrk/zap_baseline.json \
               -d \
-              -c zap_baseline.conf || echo "ZAP scan completed"
+              -c /zap/wrk/zap_baseline.conf \
+              -I \
+              -j \
+              --hook=/zap/wrk/.zap_hook.py || echo "ZAP scan completed with exit code $?"
 
-          echo "=== After ZAP scan ==="
-          echo "Files in current dir:"
-          ls -la *.html *.json 2>/dev/null || echo "No HTML/JSON files found"
-
-          echo "Files in EVIDENCE/P11/:"
-          ls -la EVIDENCE/P11/ || echo "EVIDENCE/P11/ is empty"
+          echo "=== Checking generated files ==="
+          ls -la *.html *.json 2>/dev/null || echo "No report files in root"
 
           if [ -f "zap_baseline.html" ]; then
-            echo "Moving HTML report..."
+            echo "Moving HTML report to EVIDENCE/P11/"
             mv zap_baseline.html EVIDENCE/P11/
           else
-            echo "HTML report not found, creating empty one"
-            echo "<html><body>No ZAP report generated</body></html>" > EVIDENCE/P11/zap_baseline.html
+            echo "HTML report not found"
           fi
 
           if [ -f "zap_baseline.json" ]; then
-            echo "Moving JSON report..."
+            echo "Moving JSON report to EVIDENCE/P11/"
             mv zap_baseline.json EVIDENCE/P11/
           else
-            echo "JSON report not found, creating empty one"
-            echo '{"@generated": "NO_REPORT"}' > EVIDENCE/P11/zap_baseline.json
+            echo "JSON report not found"
           fi
 
-      - name: Debug - List all files
-        run: |
-          echo "=== Final file structure ==="
-          find . -name "*.html" -o -name "*.json" | head -20
-          echo "=== EVIDENCE/P11 contents ==="
+          echo "=== Final EVIDENCE/P11 contents ==="
           ls -la EVIDENCE/P11/
 
       - name: Upload P11 evidence
