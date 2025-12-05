@@ -1,0 +1,16 @@
+ignored:
+  - DL3008
+  - DL3015
+  - DL3059
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
+override:
+  error:
+    - DL3013
+  warning:
+    - DL3003
+  info:
+    - DL4006

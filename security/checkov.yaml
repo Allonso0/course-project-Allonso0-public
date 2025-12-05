@@ -1,0 +1,13 @@
+quiet: false
+compact: true
+framework:
+  - kubernetes
+  - dockerfile
+  - docker_compose
+
+skip-check:
+  # - CKV_K8S_12
+  # - CKV_DOCKER_3
+
+soft-fail: false
+output: json
