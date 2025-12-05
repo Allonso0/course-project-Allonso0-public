@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reading-list-api
+  namespace: default
+  labels:
+    app: reading-list-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reading-list-api
+  template:
+    metadata:
+      labels:
+        app: reading-list-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: reading-list-api
+        image: reading-list-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        env:
+        - name: APP_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        - name: APP_DATABASE_URL
+          value: "sqlite:///./reading_list.db"
+        - name: APP_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: api-key
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: uploads-volume
+          mountPath: /app/uploads
+        - name: db-volume
+          mountPath: /app/reading_list.db
+          subPath: reading_list.db
+      volumes:
+      - name: uploads-volume
+        emptyDir: {}
+      - name: db-volume
+        emptyDir: {}
